@@ -19,15 +19,25 @@ Installed the default installation, which includes `cargo`, `clippy`, `rust-std`
 
 ### Cargo
 
-- Initializing new projects
+- Initialize new projects
     ```shell
     cargo new <PROJECT_NAME>
     ```
-- Running projects
+- Build projects
     ```shell
     cargo run
     ```
-- Running projects
+- Run projects
     ```shell
     cargo run
+    ```
+- Install libraries by adding them to the Cargo.toml file under dependencies. e.g.
+    ```toml
+    [dependencies]
+    rand = "0.8.5"
+    ```
+- Cargo.lock ensures reproducible builds 
+- Build documentation for all dependencies locally
+    ```shell
+    cargo doc --open
     ```
