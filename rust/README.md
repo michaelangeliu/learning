@@ -41,3 +41,30 @@ Installed the default installation, which includes `cargo`, `clippy`, `rust-std`
     ```shell
     cargo doc --open
     ```
+
+## Common Programming Concepts
+
+### Variables and Mutability
+
+- `let` allows the declaration of a immutable variable
+- `let mut` allows the declaration of a mutable variable 
+- `const` allows the declaration of a value that is allways immutable
+    - the type _must_ be annotated
+    - may only be set to a constant expression
+        - cannot be set to a value that is computed at runtime
+    - __BY CONVENTION__ - all uppercase with underscores between words
+- shadowing variables
+    - first variable is shadowed by the second and the second
+    - repeated use of `let` and the same variable name
+    - `let` is important because the variable is still immutable
+    - shadowing allows the type of the variable can change
+        ```rust
+        // valid
+        let spaces = "   "; // string
+        let spaces = spaces.len(); // number
+
+        // compile time error
+        let mut spaces = "   "; // string
+        spaces = spaces.len(); // number
+        ```
+        - avoids different names like `spaces_str` and `spaces_num`
