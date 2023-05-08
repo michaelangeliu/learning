@@ -155,3 +155,140 @@ Installed the default installation, which includes `cargo`, `clippy`, `rust-std`
     - access with squqare brackets and indexes
         - invalid index access will cause the app to panic
 
+### Functions
+
+- snake_case is the conventional style for function and variable names
+- `fn` is the function definition keyword
+
+#### Parameters
+
+- special variables that are part of a function's signature
+- `arguments` are the concrete values that are provided to a function
+- function signatures require parameter type annotations to allow it to give a more helpful error message
+
+#### Statements and Expressions
+
+- function bodies are made up of a series of statements, optionally ending in an expression
+    - __Statements__ are instructions that perform somea ction and do not return a value
+    - __Expressions__ evaluate to a resultant value
+        ```rust
+        fn main() {
+            let y = {
+                let x = 3;
+                x + 1
+            };
+
+            println!("The value of y is: {y}");
+        }
+        ```
+        - Note the lack of a semicolon. Adding a semicolon to the end of an expression turns it into a statement and it will not return a value.
+
+#### Functions with Return Values
+
+- declare function return value type after an arrow (`->`).
+    ```rust
+    fn main() {
+        let x = plus_one(5);
+
+        println!("The value of x is: {x}");
+    }
+
+    fn plus_one(x: i32) -> i32 {
+        x + 1
+    }
+    ```
+    vs.
+    ```rust
+    fn main() {
+        let x = plus_one(5);
+
+        println!("The value of x is: {x}");
+    }
+
+    fn plus_one(x: i32) -> i32 {
+        x + 1; // This semi-colon means its a statement and returns the unit type (), which contradicts the return value annotation
+    }
+    ```
+
+### Comments
+
+- `//` is the standard single line comment.
+- Sometimes at the end of lines, but more typically used as annotation on a separate line above the code.
+
+### Control Flow
+
+#### `if` expressions
+
+- start with `if` keyword, foollowed by an expression.
+- blocks of code are placed in curly braces
+    - sometimes called _arms_, like the `match`
+- `else` is optional
+- will not automatically try to convert non-Boolea types to a Boolean.
+- multiple conditions with `else if`.
+- `if` is an expression, so it can be used to assign variables (i.e. ternary assignment)
+    ```rust
+    fn main() {
+        let condition = true;
+        let number i= if condition { 5 } else { 6 };
+
+        println!("The value of number is: {number}");
+    }
+    ```
+    - Since they are expressions, the return types cannot be mismatched, or else ther eis an error.
+
+#### Repetition with Loops
+
+- `loop`
+    - repeats forever until quit
+        - `ctrl-c` can quit
+        - `break` will exit the loop
+            - Including the value after the `break` will return that value from the loop
+        - `continue` skips the remaining code to go to the next iteration
+    - `break`/`continue`
+        - applies to the inner most loop, if there are multiple
+    - loops can be labeled which can be used with `break`/`continue`
+        ```rust
+        fn main() {
+            let mut count = 0;
+            'counting_up: loop {
+                println!("count = {count}");
+                let mut remaining = 10;
+
+                loop {
+                    println!("remaining = {remaining}");
+                    if remaining == 9 {
+                        break;
+                    }
+                    if count == 2 {
+                        break 'counting_up;
+                    }
+                    remaining -= 1;
+                }
+
+                count += 1;
+            }
+            println!("End count = {count}");
+        }
+        ```
+- `while`
+    - Handles some of the nesting that would be necessary if you used `loop`, `if`, `else`, `break`.
+- `for`
+    - most commonly used for increase safety/conciseness.
+    - can avoid an out of index exception when looping through arrays or for a certain number of times using `Range`
+    ```rust
+    fn main() {
+        let a = [10, 20, 30, 40, 50];
+        let mut index = 0;
+
+        while index < 5 { { // changing this to 6 would cause the code to panic when accessing a[6].
+            println!("the value is {}", a[index]);
+
+            index += 1;
+        }}
+
+        for number in (1..4).rev() {
+            println!("{number}!");
+        }
+        println!("LIFTOFF!!!");
+    }
+    ```
