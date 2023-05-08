@@ -68,3 +68,90 @@ Installed the default installation, which includes `cargo`, `clippy`, `rust-std`
         spaces = spaces.len(); // number
         ```
         - avoids different names like `spaces_str` and `spaces_num`
+
+### Data Types
+
+#### Scalar
+
+- Integer
+    - signed/unsigned numbers in [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement)
+    - e.g. `i32`, `u32`
+    - `isize` and `usize` depends on the archtecture the computer is running on
+        - e.g. 64 bits if on a 64-bit archtecture
+    - `i32` is a good default integer size generally
+    - Can use `_` as a visual separator
+        e.g. `1_000` is equivalent to `1000`
+    - integer overflow can cause the program to panic
+        - when debugging, the compiler will check
+        - the `--release` flag will skip overflow checks and use _two's complement wrapping_
+            - relying on wrapping is considered an error
+        - Explicit handling by:
+            - Wrap in all modes with the `wrapping_*` methods, such as `wrapping_add`.
+            - Return the None value if there is overflow with the `checked_*` methods.
+            - Return the value and a boolean indicating whether there was overflow with the `overflowing_*` methods.
+            - Saturate at the value’s minimum or maximum values with the `saturating_*` methods.
+- Floating-point
+    - `f32` and `f64`
+        `f32` is single-precision flooat
+        `f64` is double-precision flooat
+    - `f64` is default due to increased precision and the assumption that it's running on modern CPUs
+    - IEEE-754 standard
+- Numeric Operations
+    - `+`, `-`, `*`, `/`, `%`,
+    - integer division truncates toward zero to the nearest integer
+        - e.g. (`-5/3 === -1` and `5/3 === 1`)
+- Booleans
+    - `bool` keyword
+    - 1 byte in size
+        i.e. `00000000` or `11111111`
+- Characters
+    - `char` keyword
+    - 4 bytes
+        - uses Unicode Scalar Values from `U+0000` to `U+D7FF` and `U+E000` to `U+10FFFF` inclusive
+    - specified with single quotes, as opposed to double quotes, which use double quotes.
+
+#### Compound Types
+
+- Tuple
+    - Group a number of values with a variety of types together
+    - fixed length, cannot grow or shrink
+    - comma-separated list of values inside parentheses
+    - each position in the tuple has a type, but can be different
+    - Can use pattern matching to destructure a tuple value
+        ```rust
+        fn main() {
+            let tup = (500, 6.4, 1);
+
+            let (x, y, z) = tup;
+
+            println!("The value of y is: {y}");
+        }
+        ```
+    - or with indexes
+        ```rust
+        fn main() {
+            let x: (i32, f64, u8) = (500, 6.4, 1);
+
+            let five_hundred = x.0;
+
+            let six_point_four = x.1;
+
+            let one = x.2;
+        }
+        ```
+    - _unit_ is a special name ofr a tuple without any values and represents an empty value or an empty return type
+        - expresssions implicitly return the _unit_ vavlue if they dont' return any other value
+- Array
+    - collection of values with the same type
+    - fixed length, cannot grow or shrink
+    - comma separated list of values inside square brackets
+    - stored in a stack, rather than a heap, in memory
+    - examples
+        ```rust
+        let a: [i32; 5] = [1, 2, 3, 4, 5]; // type can be specified like so:
+
+        let b: [3; 5]; // equivalent to [3, 3, 3, 3, 3]
+        ```
+    - access with squqare brackets and indexes
+        - invalid index access will cause the app to panic
+
