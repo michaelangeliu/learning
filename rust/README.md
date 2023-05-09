@@ -550,3 +550,35 @@ fn dangle() -> &String { // dangle returns a reference to a String
     - `println!` just takes a reference
     - This will also print the file, the line number, the resultant value of the expression, and returns ownership of the value
     - prints to `stderr`, but `println!` prints to `stdout`
+
+### Method Syntax
+
+- similar to functions
+    - declared with the `fn` keyword and a name
+    - can have parameters and a return value
+    - contain code that is run
+- defined in the context of a struct (or an enum or trait object)
+    - first parameter is always `self`, which represents the kinstance of the struct the method is being called on
+- `impl` (implementation) block allows defining the context where the method is defined
+    - `&self` is shorthand for `self: &Self`, which in the `impl` block, `Self` is an alias for the type that the `impl` block is for.
+    - may be abbreviated this with only the name `self` in the first parameter spot
+    - Must still use `&` to indicate that this method borrows the `Self` instance and is immutable
+- a _getter_ could be defined with a method to make the field private and the method public, to enable read-only access to that field
+
+#### Associated Functions
+
+- are not methods because they don't have `self` as the first parameter
+    - e.g. `String::from`
+    ```rust
+    impl Rectangle {
+        // creates a square without needing to define both the width and height
+        fn square(size: u32) -> Self {
+            Self {
+                width: size,
+                height: size,
+            }
+        }
+    }
+    ```
+    - `Self` keyword in the return type are aliases for the type of the `impl` keyword
+- `impl` blocks can be separated which could be useful for generic types and traits
