@@ -582,3 +582,70 @@ fn dangle() -> &String { // dangle returns a reference to a String
     ```
     - `Self` keyword in the return type are aliases for the type of the `impl` keyword
 - `impl` blocks can be separated which could be useful for generic types and traits
+
+## Enums and Pattern Matching
+
+```rust
+enum IpAddrKind {
+    V4,
+    V6,
+}
+
+let four = IpAddrKind::V4;
+let six = IpAddrKind::V6;
+```
+- Any IP address can either be v4 or v6, but not both at the same time
+- Allows functions to be defined to take either variant
+    ```rust
+    fn route(ip_kind: IpAddrKind) {}
+    ```
+- rather than putting an enum into a struct, we can put data directly into each enum variant
+    - the name of the enum variant also becomes a function that constructs an instance of the enum
+    - variants can have different types and amounts of associated data
+        e.g. IPv4 have four numeric components between 0 and 255, but we may still want IPv6 to be aa single string. 
+- There is a [standard library for ip address encodings](https://doc.rust-lang.org/std/net/enum.IpAddr.html)
+- We could use structs to individually define variants, but it would be more difficult to define a function to take any of the types
+
+### `Option` enum
+
+```rust
+enum Option<T> {
+    None,
+    Some(T),
+}
+```
+- allows rust to avoid having a `null` value.
+    - `None` is still better because using the `Option` type allows the compiler to check if the appropriate actions are implemented, which avoides the problem of assuming that something isn't null when it actually is.
+- part of the standard library prelude
+- Will need to get the value out of the `Option<T>` to use it
+    - https://doc.rust-lang.org/std/option/enum.Option.html
+
+#### `match` control flow
+
+- similar to a `switch/case` or a series of `if` conditions, but doesn't need to evaluate to a Boolean value
+- e.g. coin sorter
+- matches are exhaustive, so all "arms" must be covered
+    - helps prevent forgetting to explicitly handle the `None` case for `Option<T>`.
+- `match` has two catch-all patterns
+    - `other` can cover all the remaining cases, when we want to use the value in the predicate arm
+    - `_` can cover all the remaining cases, when we do NOT want to use the value in the predicate arm
+        - prevents a wanring about an unused variable
+
+### if let
+
+```rust
+let config_max = Some(3u8);
+match config_max {
+    Some(max) => println!("The maximum is configured to be {}", max),
+    _ => (),
+}
+
+// vs
+
+let config_max = Some(3u8);
+if let Some(max) = config_max {
+    println!("The maximum is configured to be {}", max);
+}
+```
+- The `_ => ()` is just boilerplate if we're not doing anything with it, but switching to `if let` loses the exhaustive pattern matching
+- can inclue an `else` statement to handle the cases for the catch-all too.
