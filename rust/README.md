@@ -484,3 +484,69 @@ fn dangle() -> &String { // dangle returns a reference to a String
 
     assert_eq!(slice, &[2, 3]);
     ```
+
+## Structs
+
+### Defining and Instantiating Structs
+
+- Essentially JS objects
+    ```rust
+    struct User {
+        active: bool,
+        username: String,
+        email: String,
+        sign_in_count: u64,
+    }
+
+    // builds and returns a User struct with these properties. Reduces duplication of property names by using the same name as a shorthand
+    fn build_user(email: String, username: String) -> User {
+        User {
+            active: true,
+            username,
+            email,
+            sign_in_count: 1,
+        }
+    }
+    ```
+    - structs can be mutable, but the whole thing must be mutable to reassign any individual properties using dot notation.
+- Struct update syntax allows the reuse of previous values using the `..` syntax
+    ```rust
+    fn main() {
+        // --snip--
+
+        let user2 = User {
+            active: user1.active,
+            username: user1.username,
+            email: String::from("another@example.com"),
+            sign_in_count: user1.sign_in_count,
+        };
+        // vs.
+        let user3 = User {
+            email: String::from("another@example.com"),
+            ..user1 // note, this won't compile because `user1` is already moved above.
+        };
+    }
+    ```
+- Tuple Structs
+    Tuple strctus are useful when the whole tuple needs a name and it should be different than other tuple types.
+    ```rust
+    struct Color(i32, i32, i32);
+    struct Point(i32, i32, i32);
+
+    fn main() {
+        let black = Color(0, 0, 0);
+        let origin = Point(0, 0, 0);
+    }
+    ```
+- Unit-like Structs
+    - Unit-like structs can be useful when you need to implement a trait on some type but don’t have any data that you want to store in the type itself.
+
+### Debugging Structs
+
+- `#[derive(Debug)]` - prepended to a struct allows the values to be debug printed with the `println!` macro
+    - debug printing uses `{:?}` or `{:#?}`, which changes the default formatting.
+- `dbg!` macro
+    - an alternative uses the `dbg!` mactro, which will take ownership of the expression
+    - `println!` just takes a reference
+    - This will also print the file, the line number, the resultant value of the expression, and returns ownership of the value
+    - prints to `stderr`, but `println!` prints to `stdout`
