@@ -292,3 +292,195 @@ Installed the default installation, which includes `cargo`, `clippy`, `rust-std`
         println!("LIFTOFF!!!");
     }
     ```
+
+## Understanding Ownership
+
+### Stack & Heap memory
+
+- Stack
+    - LIFO = Last In, First Out
+        - push & pop onto the stack
+    - must have a known szie
+- Heap
+    - returns a pointer to the address of the allocated space
+    - allocate/deallocate memory
+- pushing to the stack is faster than allocating on the heap because the allocator never has to search for a place to store new data.
+- allocating space on the heap requires more work because the allocator must first find a big enough space to hold the data and then perform bookkeeping to prepare for the next allocation.
+- accessing data in the heap is slower than on the stack because you must follow a pointer
+
+### Ownership Rules
+
+- each value in Rust has an _owner_.
+- there can only be one owner at a time.
+when the owner goes out of scope, the value will be dropped.
+
+### Variable Scope
+
+#### The String Type
+
+- allocated onto the heap
+- can be created using a string literally using the `from` function
+    ```rust
+    let s = String::from("hello");
+    ```
+- When a variable goes out of scope, it will call a special function called `drop` to return the memory
+    - In C++, this pattern of deallocating resources at the end of an item's lifetime is sometimes called _Resource Acquisition Is Initialization (RAII)_.
+- Simple vs. complex values
+    ```rust
+    let x = 5; // stores 5 into memory
+    let y = x; // stores 5 into memory
+
+    // vs.
+
+    let s1 = String::from("hello"); // adds the meta-data/pointer and also stores the string contents
+    let s2 = s1; // essentially copies the meta data, but does not copy the heap that the pointer refers to. Copying the heap memory could make it very expensive
+    ```
+    - a String is made of three parts
+        - `ptr` = points at the memory that holds the string contents
+        - `len` = length of the string
+        - `capacity` = total space allocated
+    - when `s2` and `s1` both go out of scope, both will try to free the same heap memory (_double free_ error).
+    ```rust
+        let s1 = String::from("hello");
+        let s2 = s1;
+
+        println!("{}, world!", s1); // compile error because Rust considers s1 no longer valid after the reassignment
+    ```
+- Rust will never automatically create "deep" copies of data, so _automatic_ copying is assumed to inexpensive
+- `clone` will allow a "deep" copy
+    ```rust
+    let s1 = String::from("hello");
+    let s2 = s1.clone();
+
+    println!("s1 = {}, s2 = {}", s1, s2);
+
+    ```
+- Rust has a special annotation called the `Copy` trait that we can place on types that are stored on the stack. If a type implements the `Copy` trait, variables that use it do not move, but rather are trivially copied, making them still valid after assignment to another variable.
+    - If the type or any of its parts has implemented the `Drop` trait, it cannot be implemented with `Copy`
+    - e.g.
+        - integers
+        - Booleans
+        - floating points
+        - chars
+        - tuples if they only contain types that also implement `Copy`
+
+#### Ownership and Functions
+
+- Passing aa value to a function is similar to assigning a value to a variable
+- will move/copy, just like an assignment
+    - e.g.
+        - passing a String will transfer ownership
+        - passing an integer will make a copy
+- returning the value will transfer ownership back if the value is assigned
+- Could potentially be tedious by using tuples to return multiple values:
+    - e.g. this scenario where we want to use both the string and the length
+        ```rust
+        fn main() {
+            let s1 = String::from("hello");
+
+            let (s2, len) = calculate_length(s1);
+
+            println!("The length of '{}' is {}.", s2, len);
+        }
+
+        fn calculate_length(s: String) -> (String, usize) {
+            let length = s.len(); // len() returns the length of a String
+
+            (s, length)
+        }
+        ```
+- _references_ allow using a value without transfering ownership
+
+### References and Borrowing
+
+- a reference is like a pointer that it's an address we can follow to access the data stored at that address; that data is owned by some other variable. Unlike a pointer, a reference is guaranteed to point to a valid value of a particular type for the life of that reference
+    ```rust
+    fn main() {
+        let s1 = String::from("hello");
+
+        let len = calculate_length(&s1);
+
+        println!("The length of '{}' is {}.", s1, len);
+    }
+
+    fn calculate_length(s: &String) -> usize {
+        s.len()
+    }
+    ```
+    - no tuple code and they use `&` in both the argument and the function definition
+        - `&` represents _references_, which allows values to be referenced without taking ownership of it.
+- _borrowing_ = the act of creating a reference
+- also immutable by default but we can create mutable references
+    ```rust
+    fn main() {
+        let mut s = String::from("hello");
+
+        change(&mut s);
+    }
+
+    fn change(some_string: &mut String) {
+        some_string.push_str(", world");
+    }
+    ```
+    - cannot create multiple mutable __simultaneous__ references to a value
+        - allows for mutation, but carefully
+        - can prvent data races
+            - e.g.
+                - two or mre pointers access the same data at the same time
+                - at least one of thpointers is being used towrite to the data
+                - there's no mechanism being used to synchronize access to the data
+        - using a curly brace can create separate scopes to allow for multiple mutable references, just not _simultaneous_ ones
+    - similar rule for combining mutable and immutable references
+
+#### Dangling References
+
+- _dangling pointer_ = pointer that references a location in memory that may have been given to someone else
+```rust
+fn dangle() -> &String { // dangle returns a reference to a String
+
+    let s = String::from("hello"); // s is a new String
+
+    &s // we return a reference to the String, s
+} // Here, s goes out of scope, and is dropped. Its memory goes away.
+  // Danger!
+```
+- Solution:
+    ```rust
+    fn no_dangle() -> String {
+        let s = String::from("hello");
+
+        s // return the string
+    }
+    ```
+
+- The Rules of References
+    - At any given time, you can have either one mutable reference or any number of immutable references.
+    - References must always be valid.
+
+### Slice Type
+
+- A _string slice_ is a reference to part of a `String`
+    ```rust
+    let s = String::from("hello world");
+
+    let hello = &s[0..5];
+    let world = &s[6..11];
+    ```
+    - Just references a portion of a string using a starting and ending index
+    - Ommitting the index means starting at either the beginning or end of the string
+    - Avoids the value being freed when there are useless references to the size later.
+- Swapping `&String` with `&str` increases the flexibility through _deref coercions_
+    ```rust
+    fn first_word(s: &String) -> &str { ... }
+    // vs
+    fn first_word(s: &str) -> &str { ... }
+    ```
+    - this is because `&str` is a slice pointing to a specific point of the binary data
+- Arrays can also be sliced
+    ```rust
+    let a = [1, 2, 3, 4, 5];
+
+    let slice = &a[1..3]; // type of &[i32]
+
+    assert_eq!(slice, &[2, 3]);
+    ```
