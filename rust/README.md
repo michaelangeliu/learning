@@ -649,3 +649,122 @@ if let Some(max) = config_max {
 ```
 - The `_ => ()` is just boilerplate if we're not doing anything with it, but switching to `if let` loses the exhaustive pattern matching
 - can inclue an `else` statement to handle the cases for the catch-all too.
+
+## Packages, Crates, and Modules
+
+- __Packages__ = A Cargo feature that lets you build, test, and share crates
+- __Crates__ = A tree of modules that produces a library or executable
+- __Modules__ and __use__ = Let you contro the organization, scope, and privacy of paths
+- __Paths__ = A way of naming an item, such as a struct, function, or module
+
+### Packages and Crates
+
+- _crate_ = smallest amount of code that the Rust compiler considers at a time
+- `rustc` considers the single file that is passed as a crate
+- 2 forms
+    - binary crate = programs compiled to an executable that can be run (CLI program or server)
+        - must have a function called `main`
+    - library crate = define functionality intended to be shared with multiple projects
+        - references to "crate" usually mean a "library" crate
+- _package_ = bundle orf one or more crates that provides a set of functionality
+    - contains a _Cargo.toml_ file that describes how to build those crates
+    - Cargo is actually a package
+    - must contain at least one crate
+        - many binary crates
+        - only one library crate
+    - __BY CONVENTION__ - _src/main.rs_ is the crate root of a binary crate
+    - __BY CONVENTION__ - _src/lib.rs_ is the crate root for a library crate
+    - may have multiple binary crates by placing files in the _src/bin_ directory
+
+### Defining Modules to Control Scope and Privacy
+
+- [Modules Cheat Sheet](https://doc.rust-lang.org/book/ch07-02-defining-modules-to-control-scope-and-privacy.html#modules-cheat-sheet)
+    1. Start from the crate root (_src/lib.rs_ or _src/main.rs_)
+    2. Declare modules - compiler looks for the modules code
+        - e.g. a "garden" module could be declared with `mod garden;`. The compiler looks for the module's code
+            - inline (by replacing the semicolon with curly brackets)
+            - in the file _src/garden.rs_
+            - in the file _src/garden/mod.rs_
+    3. Declare sub modules - Therse are declared in the other files
+        - e.g. a "vegetable" submodule could be declared with `mod vegetables;` in _src/garden.rs_. The compiler looks for the submodule's code
+            - inline (by replacing the semicolon with curly brackets)
+            - in the file _src/garden/vegetables.rs_
+            - in the file _src/garden/vegetables/mod.rs_
+    4. Paths to code in modules - once a module is part of your crate, you can refer to code in that module from anywhere else in the same crate as long as privacy rules allow
+        - NOT the same as `include` in other languages because only needed once for the whole project. All references will refer to the loaded file's code
+    5. Private vs public - code is private by default, but can be made public by using `pub mod`
+    6. `use` keyword can create shortcuts to reduce repetition of long paths
+
+### Paths for referring to an item in the Module Tree
+
+- show where to find an iterm in a module tree
+    - _absolute path_ = full path starting from a crate root
+        - external crates start with the crate name
+        - current crate starts with the literal `crate`
+            - like using `/` to start from the filesystem root in your shell
+    - _relative path_ starts from the current module and uses `self`, `super`, or an identifier in the current modules
+- separate identifies with double colons (`::`)
+- depends on whether you're more likely to move item definition code separately from or together with the code that uses the itme.
+    - generally absolute path is preferred because it's more likely we'll want to move code definitions and item calls independently of each other.
+- parents can't use private items in child modules, but child modules can use the items int heir ancestor modules
+    - child modules wrap and hide their implementation details
+    - defaulting to private and hiding inner implementaiton details lets you know which parts of the inner code you can change without breaking outer code.
+- __BEST PRACTICE__ - packages can contain both _src/main.rs_ and _src/lib.rs_ with the package name by default. Packages containing both types of crates will typically have just enough code in the binary crate to start an executable that calls code with the lbirary crate. This allows other projects to benefit rom the most functionality that the package provides because the library crate's code cna be shared.
+    - Module tree should be defined in the _src/lib.rs_, only public items can be used by the binary crate. So the binary crate is just another user of the library crate, just like a completely external crate would use the library crate.
+- `super` allows construction of relative paths that begin in the parent module rather than the current module or crate root. (i.e. filesystem path with the `..` syntax)
+
+#### Making Structs and Enums Public
+
+- Structs - `pub` will only make the struct public, but the fields are still private.
+- Enums - `pub` will make all of its variants public
+
+### Bringing Paths into Scope with the `use` keyword
+
+- `use` creates a shortucut to a path allowing the shorter name everywhere else in scope.
+- similar to a symbolic link in the filesystem
+- only a shortcut for the particular scope in which the `use` occurs
+    - can't use the shortcut in child modules, etc.
+- Creating Idiomatic `use` Paths
+    - Bringing the function’s parent module into scope with use means we have to specify the parent module when calling the function. Specifying the parent module when calling the function makes it clear that the function isn’t locally defined while still minimizing repetition of the full path.
+    - For structs, enums, and other items, it's idiomatic to specify the full path.
+- Creating new names with the `as` keyword
+    - allows for changing the name when there are two types with the same name.
+- Rexporting Names with `pub use`
+    - brings item into scope, but also makes the item available for other sto bring into their scopee
+    - useful when the internal structure of your code is different from how programmers calling your code would think about the domain.
+        - we can write the code with one structure but expoes a different structure
+        - makes our library organized for programmers working on the library and programmers calling the library
+- External Packages
+    - can be used by adding them to _Cargo.toml_
+- Nested Paths
+    - Can change
+        ```rust
+        // --snip--
+        use std::cmp::Ordering;
+        use std::io;
+        // --snip--
+        ```
+        to
+        ```rust
+        // --snip--
+        use std::{cmp::Ordering, io};
+        // --snip--
+        ```
+    - or
+        ```rust
+        // --snip--
+        use std::io;
+        use std::io::Write;
+        // --snip--
+        ```
+        to
+        ```rust
+        // --snip--
+        use std::{self, Write};
+        // --snip--
+        ```
+- Glob Operator
+    - `*` brings all public items in a defined path into scope
+    - be careful since it can make it harder to tell what names are in scope and where a name used in your program was defined
+    - often used when testing or as part of the prelude pattern
+
