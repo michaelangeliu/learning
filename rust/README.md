@@ -685,11 +685,13 @@ if let Some(max) = config_max {
             - inline (by replacing the semicolon with curly brackets)
             - in the file _src/garden.rs_
             - in the file _src/garden/mod.rs_
+                - This is an older style, but still supported (can be confusing to have many files named _mod.rs_)
     3. Declare sub modules - Therse are declared in the other files
         - e.g. a "vegetable" submodule could be declared with `mod vegetables;` in _src/garden.rs_. The compiler looks for the submodule's code
             - inline (by replacing the semicolon with curly brackets)
             - in the file _src/garden/vegetables.rs_
             - in the file _src/garden/vegetables/mod.rs_
+                - This is an older style, but still supported (can be confusing to have many files named _mod.rs_)
     4. Paths to code in modules - once a module is part of your crate, you can refer to code in that module from anywhere else in the same crate as long as privacy rules allow
         - NOT the same as `include` in other languages because only needed once for the whole project. All references will refer to the loaded file's code
     5. Private vs public - code is private by default, but can be made public by using `pub mod`
