@@ -770,3 +770,85 @@ if let Some(max) = config_max {
     - be careful since it can make it harder to tell what names are in scope and where a name used in your program was defined
     - often used when testing or as part of the prelude pattern
 
+## Common Collections
+
+- most other data types represent one specific value, but collections can contain multiple values.
+- unlike built-in array an dtuple types, the data these collections point to is stored on the heap,
+    - means the amount of data does not need to be known at complie time and can grow or shrink as the program runs
+- 3 often used collections
+    - _vector_ = store a variable number of values next to each other.
+    - _string_ = collection of characters
+    - _hash map_ = assoiate a value with a particular key
+        - specific implementation of a more general data structure called a _map_
+    - [Other Collections](https://doc.rust-lang.org/std/collections/index.html)
+
+### Storing Lists of Values with Vectors
+
+- Create a new empty vector with `Vec::new` or `vec!`
+    - `push` will add elements to the vector if it is mutable
+- Read elements of vectors via indexing or the `get` method
+    - Using indexing will cause the program to panic because it references a nonexistant element `let does_not_exist = &v[100];`
+    - Using `get` returns an `Option`, so it can rreturn `None`
+- Iterate through a vector using a `for-in` loop.
+- Enum to store multiple types
+    - Vectors can only store values that are the same type, so using an enum allows different types to be held
+    - The compiler needs to know how much memory on the heap will be needed to store each element
+    - Enum plus a `match` expression will ensure at compile time, every case is handled
+        - traits can be used if the exhhaustive set of types is unknown
+- Drop element 
+
+### Storing UTF-8 ESncoded Text with Strings
+
+- `str` is the only String type in the core language
+    - usually seen in its borrowed form `&str`
+- `String` is provided by Rust's standard library
+    - gorwable, mutable, owned, UTF8-encoded
+- `String` is a wrapper around a vector of bytes with some extra guarantees, restrictions, and capabilities
+    - `to_string` method is available to any type that implements the `Display` trait
+        - creates a `String` from a string literal
+    - `from` creates a String from string literal
+- Updating Strings
+    - `push_str` to append a string slice
+    - `push` to append a single character
+    - `+` uses the `add` method
+        ```rust
+        fn add(self, s: &str) -> String {}
+        ```
+        - copiler coerces the `&String argument into a `&str`
+    - `format!` macro for Multiple concatenations
+- Indexing into Strings
+    - `String` cannot be indexed by an integer because unicode scalar values may take more than one byte of storage
+        - Strings can be viewed as bytes, scalar values, and grapheme clusters to allow for handling many different human languages
+        - Not an O(1) operation because Rust would have to walk through the contents from the beginning to the index to determine valid characters
+- Slicing Strings
+    - Since it's not clear what the return type of the string indexing operation should be, Rust uses a a range to create a string slice containing particular bytes
+    - if the slice only contains part of a characater's bytes, it will panic at runtime
+- Methods for iterating over Strings
+    - `chars` will return the separate characters
+    - `bytes` will return each raw byte
+        - Some valid Unicode scalar values may be made up of more than 1 byte
+    - grapheme clusters are complex, so it's not included in the standard library
+- other methods are built into the standard library
+    - `contains` for searcdhing in a string
+    - `replace` for substituting parts of a string
+
+### Hash Maps
+
+- `HashMap<K, V>` to store data with keys of tkype `K` and values of type `V`
+    - not commonly used, so it is not included with the prelude
+- Create with `new`
+- Add elements with `insert`
+- Access with `get`
+    - can be iterated through with a `for` loop in an arbitrary order
+- types that implement the `Copy` trait will be copied into the hasmap
+- owned values will be moved and the hash map will be the owner of those values
+    - inserting references to values into the hash map won't move the values, but the values must be valid for at least as long as the hash map is valid
+- Updating has options, depending on the desired outcome
+    - Overwrite the value by calling `insert` twice. Will only keep the latest insert.
+    - Adding a key and value only if a key isn't present
+        - `entry` is a special API which returns an enum called `Entry` that represents a value that might or might not exist.
+        - `Entry::or_insert` is defined to return a mutable reference to the value for the corresponding `Entry` key if that key exists
+    - Updating a value based on the old value
+        - `Entry` returns a mutable reference, which can be dereferenced and modified
+- Default hashing function is _SipHash_ for resistance to DoS attacks involving hash tables
+    - more secure, but slightly slower, can be changed by using a different hashing function which implements the `BuildHasher` trait
