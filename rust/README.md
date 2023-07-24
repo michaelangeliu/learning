@@ -852,3 +852,178 @@ if let Some(max) = config_max {
         - `Entry` returns a mutable reference, which can be dereferenced and modified
 - Default hashing function is _SipHash_ for resistance to DoS attacks involving hash tables
     - more secure, but slightly slower, can be changed by using a different hashing function which implements the `BuildHasher` trait
+
+## Error Handling
+
+- Two major categories: _recoverable_ and _unrecoverable_ errors
+    - Recoverable errors can just be reported to the user and the operation retried
+        - `Result<T, E>` is used
+    - Unrecoverable errors are the symptoms of bugs
+        - `panic!` macro stops execution
+
+### Unrecoverable Errors with `panic!`
+
+- By default `panic!` will
+    1. print a failure message
+    2. unwind
+        - walks bback up the stack and cleans up the data from each function it encounters
+        - _aborting_ is an alternative, which ends the program without cleaning up
+            ```toml
+            [profile.release]
+            panic = 'abort'
+            ```
+    3. clean up the stack
+    4. quit
+- via an environment variable, we can have Rust display the call stack to make it easier to track down the source of the panic
+    ```shell
+    RUST_BACKTRACE=1 cargo run
+    ```
+    - debug symbols are enabled by default when using `cargo build` or `cargo run` without the `--release` flag
+
+### Recoverable Errors with `Result`
+
+- `Result`` is an enum
+    ```rust
+    enum Result<T, E> {
+        Ok(T),
+        Err(E),
+    }
+    ```
+- `Result`, like `Option`, is brought into scope by the `std` prelude.
+- Using the `match` expression is one way to handle the `Result`.
+    ```rust
+    use std::fs::File;
+
+    fn main() {
+        let greeting_file_result = File::open("hello.txt");
+
+        let greeting_file = match greeting_file_result {
+            Ok(file) => file,
+            Err(error) => panic!("Problem opening the file: {:?}", error),
+        };
+    }
+    ```
+- We can nest `match` to handle different errors
+    ```rust
+    use std::fs::File;
+    use std::io::ErrorKind;
+
+    fn main() {
+        let greeting_file_result = File::open("hello.txt");
+
+        let greeting_file = match greeting_file_result {
+            Ok(file) => file,
+            Err(error) => match error.kind() {
+                ErrorKind::NotFound => match File::create("hello.txt") {
+                    Ok(fc) => fc,
+                    Err(e) => panic!("Problem creating the file: {:?}", e),
+                },
+                other_error => {
+                    panic!("Problem opening the file: {:?}", other_error);
+                }
+            },
+        };
+    }
+    ```
+    - `file::open` returns an `Err` variant of `io::Error`, which has a `kind` metthod to get an `io::ErrorKind` value (e.g. `ErrorKind::NotFound`)
+- Using a closure can be more concise than using `match`.
+    - can use the `unwrap_or_else` method to pull the type out of the `Result` enum.
+
+#### Shortcuts for Panic on Error: `unwrap` and `expect`
+
+- `unwrap` will return the value inside `Ok` or call `panic!`
+- `expect` lets us choose the `panic!` message, to make tracking down the source of panic easier
+    ```rust
+    use std::fs::File;
+
+    fn main() {
+        let greeting_file = File::open("hello.txt")
+            .expect("hello.txt should be included in this project");
+    }
+    ```
+    - generally use `expect` over `unwrap` in production quality code to provide more context about why the operation is expected to always succeed. If assumptions are wrong, there's more information to use in debugging.
+
+#### Propagating Errors
+
+- Returning the error to the calling code can give more control to the calling code where there might be more information or logic that dictates how the error should be handled
+- `?` operator is a shortcut for propagating errors
+    - defined to work the same as the `match` ... `return Err`
+    - error values that have the `?` operator called on them go through the `from` function, which is used to convert values from one type into another.
+        - this returns one error type ot represent all the ways a function might fail, even if parts might fail for many different reasons
+    - chainable
+        ```rust
+        use std::fs::File;
+        use std::io::{self, Read};
+
+        fn read_username_from_file() -> Result<String, io::Error> {
+            let mut username = String::new();
+
+            File::open("hello.txt")?.read_to_string(&mut username)?;
+
+            Ok(username)
+        }
+        ```
+        - instead of creating a variable `username_file`, the `read_to_string` is chained directly to the result of `File::open("hello.txt")?`
+    - reading a file to a string is fairly common, so the `fs` library provides `fs::read_to_striGng`, which opens a file, creates a new `String`, reads the contents of the file, puts the contents into that `String`, and returns it. Handling all the errors.
+    - can only be used when the return type of the calling function is a `Result` or `Option` or a type that implements `FromResidual`, since it's defined to use the `match` and those specific early return arms.
+        - if it's an `Option`, it will either return `None` or the type inside `Option<T>`
+        - will not convert between `Result` and `Option` or vice versa.
+            - We can use `Result::ok` or `Option::ok_or` to explicitly convert
+- `main` is special because it's the entry and exit point of executable programs
+    - can return aa `Result<(), E>`
+    - if `main` returns `Ok(())`, it will exit with a value of `0` and will exit with a nonzero value if `main` returns an `Err`
+        - This is compatible with the C convention.
+
+### To `panic!` or Not to `panic!`
+
+- Using `Result` gives the calling code options to recover when defining a function that might fail
+- In prototype code/tests, it might be more useful to call `panic!`
+    - useful before deciding how to handle errors
+    - `unwrap` and `expect` leave markers in the code for when we're ready to make the program more robust
+    - We can use `expect` to temporarily mark logically impossible failures
+        - e.g. if we hardcode something that should never fail, if we end up not hard coding something in the future, the error will need to be handled.
+        ```rust
+        use std::net::IpAddr;
+
+        let home: IpAddr = "127.0.0.1"
+            .parse()
+            .expect("Hardcoded IP address should be valid");
+        ```
+        - parse returns a `Result` and the compiler will want us to handle the `Err` variant as a possibility
+            - the compiler isn't smart enough to know that the hard coded IP address is always valid, but if the IP did come from a user, then it does have a possibility of failure so we know to come back and make the `expect` more robust
+- Panicking is advised if the code could end up in a _bad state_
+    - e.g.
+        - some assumption, guarantee, contract, or invariant has been broken (invalid, contradictory, missing values)
+        - AND one or more of the following:
+            - something that is unexpected, as opposed to something that will likely happen occasionally (e.g. a user enters data in the wrong format)
+            - code after this point needs to rely on not being in this bad state, rather than checking for a problem at every step
+            - not a good way to encode this information in the types we use
+    - if continuing could be insecure or harmful, calling `panic!` encourages the person using the library to fix the bug during development
+- if failure is an expected possibility, then returning `Result` helps force the calling code to decioide how to handle it.
+- using the type system takes advantage of using the compiler to help ensure that only appropriate code is compiled
+    - e.g. if we don't use `Option`, then there must be a value since `None` cannot be returned
+
+#### Creating Custom Types for Validation
+
+- We can create a new type that encapsulates validations and forces the calling function to use the type
+    ```rust
+    pub struct Guess {
+        value: i32,
+    }
+
+    impl Guess {
+        pub fn new(value: i32) -> Guess {
+            if value < 1 || value > 100 {
+                panic!("Guess value must be between 1 and 100, got {}.", value);
+            }
+
+            Guess { value }
+        }
+
+        pub fn value(&self) -> i32 {
+            self.value
+        }
+    }
+    ```
+    - `value` is a private field in `Guess` and can only be accessed through the `value` getter function.
+        - keeping the field private ensures that the field cannot be set outside of using `new`, which forces the value through the validation.
