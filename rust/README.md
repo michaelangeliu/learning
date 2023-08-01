@@ -1027,3 +1027,208 @@ if let Some(max) = config_max {
     ```
     - `value` is a private field in `Guess` and can only be accessed through the `value` getter function.
         - keeping the field private ensures that the field cannot be set outside of using `new`, which forces the value through the validation.
+
+## Generic Types, Traits, and Lifetimes
+
+- Tools for effectively hadnling the duplication of concepts
+- _generics_ are abstract stand-ins for concrete types or other properties
+- _traits_ define behavior in a generic way and can be combined with generic types to constrain them to only accept types that have a particular behavior
+- _lifetimes_ are a variety of generics that give the compiler information about how references relate to each other
+    - can ensure references will be valid in more situations than it coudl without our help
+- We can use _functions_ to abstract duplicated functionality without dealing with generics
+    1. Identify duplicate code
+    2. Extract the duplicate code into the body of the function and specify the inputs and return values of that code in the function signature.
+    3. Update the two instances of duplicated code to call the function instead
+
+### Generic Data Types
+
+- Any identifier can be used as a type parameter name. `T` is used because, by convention, type parameters names are short and Rust's type-naming ocnvention is PascalCase. `T` is short for "type".
+    - The generic type parameter name must be included in the function signature. e.g. `fn largest<T>(list: &[T]) -> &T { ... }` or `impl<T> Point<T> { ... }`
+- Generic types can be restricted to those that implement certain traits
+- Can use multiple generic type parameters by including more type parameter names.
+    - Too many can make the code hard to read
+- `Option<T>` and `Result<T, E>` are both enums thhat can hold generic data types in their variants.
+- We can implement methods on structs that are only defined for specific types, constraining them to specific instances that apply to that specific type.
+    - Other instances of the struct that are not of that type won't have that method defined.f
+
+#### Performance
+
+- generic types won't make the program run any slower than it would with concrete types.
+    - _monomorphization_ of the code turns generic code into specific code by filling in the concrete types that are used when compiled.
+    - makes generics efficient at runtime
+
+### Traits: Defining Shared Behavior
+
+- _traits_ define functionality a particular type has and can share with other types
+    - similar to a feature often called _interfaces_ in other languages
+- _trait bounds_ specify that a generic type can be any type that has certain behavior
+- way to group method signatures together to definde a set of behaviors necessary to accomplish some purpose
+    ```rust
+    pub trait Summary {
+        fn summarize(&self) -> String;
+    }
+    ```
+    - Instead of an implementation, we end it with a semicolon, allowing each type implementing the trait to provide its own custom behavior for the body of the method.
+    - multiple methods can be included per a trait, one per line, each ending in a semicolon
+- implementing a trait on a type uses `impl <TRAIT_NAME> for <TYPE>`
+    ```rust
+    pub struct NewArticle {
+        pub headline: String,
+        pub location: String,
+        pub author: String,
+        pub content: String,
+    }
+    
+    impl Summary for NewsArticle {
+        fn summarize(&self) -> String {
+            format!("{}, by {} ({})", self.headline, self.author, self.location)
+        }
+    }
+
+    pub struct Tweet {
+        pub username: String,
+        pub content: String,
+        pub reply: bool,
+        pub retweet: bool,
+    }
+
+    impl Summary for Tweet {
+        fn summarize(&self) -> String {
+            format!("{}: {}", self.username, self.content)
+        }
+    }
+    ```
+    - at least one of the trait or the type must be local to our crate. Both cannot be external
+        - _coherence - orphan rule_ restriction ensures that other people's code can't break your code. Without the rule, two crates could implement the same trait for the same type, and Rust wouldn't know which implementation to use.
+    - default behavoir can be implemented using `{ ... }` instead of `;`
+        - when implementing, we can use an empty block (e.g. `impl Summary for NewsArticle {}`)
+- It's possible to use overriding implementations within a default implementation
+    - e.g.
+    ```rust
+    pub trait Summary {
+        fn summarize_author(&self) -> String;
+
+        fn summarize(&self) -> String {
+            format!("(Read more from {}...)", self.summarize_author())
+        }
+    }
+
+    impl Summary for Tweet {
+        fn summarize_author(&self) -> String { // Only needs to define summarize_author
+            format!("@{}", self.username)
+        }
+    }
+
+    // Calling .summarize from a Tweet type will return the "Read more..." along with the summarize_author infomration
+    ```
+- traits can be used on parameters to bind parameters to specific traits
+    ```rust
+    pub fn notify(item: &impl Summary) { // Must pass a type that implements Summary
+        // ...
+    }
+
+    // The above is syntactic sugar for the Trait Bound Syntax
+    pub fn notify<T: Summary>(item: &T) {
+        // ...
+    }
+    ```
+    - The `impl Trait` syntax can allow the same method to have parameters that use different types. The Trait Bound synatx must be used if we want them to have the same type
+        ```rust
+        pub fn notify(item1: &impl Summary, item2: &impl Summary) { }
+        // vs.
+        pub fn notify<T: Summary>(item1: &T, item2: &T) { }
+        ```
+    - `+` syntax can be used to bind multiple traits
+        ```rust
+        pub fn notify(item: &(impl Summary + Display)) { }
+        // vs.
+        pub fn notify<T: Summary + Display>(item: &T) { }
+        ```
+    - `where` is an alternate syntax for multiple trait bounds to increase clarity
+        ```rust
+        fn some_function<T: Display + Clone, U: Clone + Debug>(t: &T, u: &U) -> i32 { }
+        // vs.
+        fn some_function<T, U>(t: &T, u: &U) -> i32
+        where
+            T: Display + Clone,
+            U: Clone + Debug,
+        { }
+        ```
+- return types can implement traits
+    ```rust
+    fn returns_summarizable(switch: bool) -> impl Summary { }
+    ```
+    - can only use `impl Trait` if we're returning a single Type
+        - restriction around how the `impl Trait` syntax is implemented in the compiler
+        - There is a way to work around this discussed later
+- We can conditionally implement traits based on restricdtions
+    - i.e. we can implement certain traits for every generic type or add trait bounds to restrict the need to implement a trait to only types that meet the prerequisites
+- _blanket implementations_ can be used to implement a trait for any type that implements another trait
+    - e.g. the standard library implements the `ToString` trait on any type that implements the `Display` trait, allowing us to call `.to_string` on type that implements `Display`.
+        ```rust
+        impl<T: Display> ToString for T { }
+        ```
+
+### Validating References with Lifetimes
+
+- generic that ensures that references are valid as long as we need them to be.
+- required by Rust to ensure the actual references used at runtime will definitely be valid
+- _dangling reference_ cause a program to reference data other than the data it's intended to reference
+    - e.g. declaring a variable in the outer scope without initializing it, setting it in an inner scope, then referencing it back in the outer scope
+        - the variable has gone out of scope before we try to use it. 
+- The _borrow checker_ compares scopes to determine whether all borrows are valid
+
+#### Generic lifetimes in Functions
+
+- When the return value has an ambiguous lifetime, it needs a lifetime annotation
+    ```rust
+    fn longest(x: &str, y: &str) -> &str {
+        if x.len() > y.len() {
+            x
+        } else {
+            y
+        }
+    }
+    ```
+    - we don't know whether the reference to `x` or to `y` will be returned and the compiler doesn't know either, so adding generic lifetime parameters help define the relationship between the references so the borrow checker can perform its analysis
+- Lifetime parameter names must start with an apostrophe (`'`) and are usually all lowercase and very short
+    - place the lifetime parameter after the `&` of a reference, using a space to separate the annotation from the reference's type.
+    - `'a` is often used for the first lifetime annotation
+    - Lifetime annotations in function signatures are declared inside angle brackets
+        ```rust
+        fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+            if x.len() > y.len() {
+                x
+            } else {
+                y
+            }
+        }
+        ```
+        - for some lifetime `'a`, the function takes two parameters, both are string slices that live at least as long as lifetime `'a`
+    - doesn't change the lifetime, but adding a constraint that rejects values that don't adhere to these contraints
+        - lifetime annotations become part of the contract of the function, much like the types in the signature
+- Lifetime Annotations in Struct Definitions
+    - if the struct holds references, then references in the struct's definition need lifetime annotations
+        ```rust
+        struct ImportantExcerpt<'a> {
+            part: &'a str,
+        }
+        ```
+- Lifetime Elision
+    - set of particular cases where lifetime annotations are automatically handled by the compiler because they follow a deterministic pattern
+    - if there's ever ambiguity, then the compiler will default to erroring, which can be resolved by adding explicit annotations
+    - _input lifetimes_ = lifetimes on function or method parameters
+    - _output lifetimes_ = lifetilmes on return values
+    - 3 rules (1 for input, 2 for output) to figure out the lifetimes of the referencew when there aren't explicit annotations
+        1. Each parameter that is a reference gets its own lifetime parameter
+        2. if there is only 1 input lifetime parameter, it is assigned to all output lifetime parameters
+        3. if tthere are multiple input lifetime parameters, but one of them is `&self` or `&mut self`, then the lifetime of `self` is asssigned to all output lifetime parameters
+
+- Lifetime Annotations in Method Definitions
+    - Lifetime names for struct fields always need to be declared after the `impl` keyword and then used after the struct’s name, because those lifetimes are part of the struct’s type.
+    - method signatures may be dependent or independent of the lifetimes of the struct's fields
+
+- Static Lifetime
+    - `'static` denotes that the affected reference _can_ live for the entire duration of the program
+    - Some error messages may recommend using `'static`, but think about if the reference actually needs to live the entire lifetime of the program or not.
+        - usually because of dangling references or a mismatch of available lifetimes
