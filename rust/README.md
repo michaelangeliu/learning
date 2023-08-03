@@ -1232,3 +1232,83 @@ if let Some(max) = config_max {
     - `'static` denotes that the affected reference _can_ live for the entire duration of the program
     - Some error messages may recommend using `'static`, but think about if the reference actually needs to live the entire lifetime of the program or not.
         - usually because of dangling references or a mismatch of available lifetimes
+
+## Writing Automated Tests
+
+- In his 1972 essay "The Humble Programmer," Edsger W. Dijkstra said that "Program testing can be a very effective way to show the presence of bugs, but it is hopelessly inadequate for showing their absence." That doesn’t mean we shouldn’t try to test as much as we can!
+- types helps handle correctness, but automated tests can help ensure the functionality works as intended
+
+### How to Write Tests
+
+- Typically perform three actions
+    1. Set up any needed data or state
+    2. Run the code you want to test.
+    3. Assert the results are what you expect
+- Tests are annotated with the `test` attribute
+    - Add `#[test]` on the line before the `fn`
+    - Can be run with `cargo test`
+    - library projects will automatically generate a test module
+
+### Checking Results with the `assert!` Macro
+
+- `assert!` requires an argument that evaluates to a Boolean
+    - `true` -> nothing happens, test passes
+    - `false` -> calls panic! and test fails
+- Testing equality
+    - `assert_eq!` = test for equality
+        - uses `left` and `right`, instead of `expected` and `actual`
+        - uses `==`
+    - `assert_ne!` = test for inequality
+        - useful for when we know what the value shouldn't be
+        - uses `!=`
+    - Must implement `PartialEq`, and `Debug` traits
+        - usually as easy as adding `#[derive(PartialEq, Debug)]` to the struct or enum definition
+- Adding Custom Failure Messages
+    - any argumets specified after the required arguments are passed along to the `format!` macro
+- `#[should_panic]` = tests that the code should panic, fails if the code doesn't panic
+    - placed after the `#[test]` attribute
+    - will panic, even for reasons not than the one we're expecting
+    - optional `expected` parameter
+- Using `Result<T, E>` in Tests
+    - enables you to use the question mark operator, which can be a convenient way to write tests that should fail if any operation within them returns an `Err` variant
+        - won't panic, so we can't use `#[should_panic]`
+            - instead use `assert!(value.is_err())` without the `?` operator on the `Result<T, E>` value.
+
+### Controlling How Tests Are Run
+
+- `cargo test` compiles code in test mode and runs the resulting test binary
+    - default runs tests in parallel and caputres output generated during test runs
+    - only shows test result output
+        - i.e. `println!` won't be displayed
+    - use `--` to separate arguments
+        - `cargo test --help` = displays options for `cargo test`
+        - `cargo test -- --help` = displays options for after the `--` separator
+- `--test-threads=1` = restricts tests to running consecutively
+- `--show-output` = will allow prints to be displayed
+- `cargo test <NAME>` = will only run the tests that match the `<NAME>`
+- `#[ignore]` = excludes tests if added underneat the `#[test]` attribute
+    - `--ignored` = only runs ignored tests
+    - `--include-ignored` = runs all tests, including ignored
+
+### Test Organization
+
+- _unit tests_ = small, more focused, testing individual modules in isolation. Can test private interfaaces
+    - Put in the _src_ directory, in each file with the code that they're testing
+    - Convention is to create a module named `tests` in each file to contain test function and to annotate the module with `cfg(test)`
+        - `#[cfg(test)]` = compile and run the test code only when you run `cargo test`, not when you run `cargo build`
+            - `cfg` = _configuration_
+                - tells Ruest that the following item should only bie included given a certain configuration option.
+    - private functions are testable within the file since `use super::*` brings the file's scope in to allow it to be tested
+- _integration tests_ are entirely external to yoru library and use your code in the same way any other external code would. Only uses public interfaces
+    - put in the _tests_ directory, next to _src_
+    - each file is compiled as an individual crate, so include the library in scope with `use`
+        - this allows each file to create it's own scope similar to how users might use the crate
+    - no `#[cfg(test)]` annotation needed because the _tests_ directory is special
+    - to share code within the _tests_ directory, use the older `mod.rs` syntax within a folder
+        - This tells Rust not to treat the module as an integration test file
+        - Files in subdirectories of the _tests_ directory don’t get compiled as separate crates or have sections in the test output.
+- Three sections of tests unit -> integration -> doc
+    - if a preceding section fails, the following sections will not be run.
+- binary crates with only a _src/main.rs_ file do not expose functions that other crates can use
+    - best practice to keep the _src/main.rs_ simple and import the _src/lib.rs_ modules as needed.
+        - the _src/lib.rs_ modules can be integration tested
