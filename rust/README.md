@@ -1380,3 +1380,16 @@ if let Some(max) = config_max {
         - `'static` lifetime is ok for the error values since it will exist for the lifetime of the program
     - return `Ok` when successful
 - `unwrap_or_else` will return the inner `Ok` value, but if there is an `Err`, it will pass the error message into the anonymous function
+
+#### Extracting Logic from `main`
+
+- Separate the remaining file reading logic from the `main` function into a `run` function keeps the `main` function concise
+- Returning a `Result` in the `run` funciton helps us improve the error handling here as well
+    - `Box<dyn Error>` is a _trait object_
+        - must return a type that implements the `Error` trait, but we don't have to specify the particular type
+        - `dyn` is short for "dynamic"
+    - replace `expect` with `?`
+        - passes the error value from the current function for the caller to handle
+    - return the `()` unit type
+        - `Ok(())` is the idiomatic way to indicate we only want the side effects, no return value necessary
+- `if let` rather than `unwrap_or_else` to check whether `run` returns an `Err` value. `run` doesn't return a value that we want to `unwrap`.
