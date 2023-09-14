@@ -1319,7 +1319,7 @@ if let Some(max) = config_max {
     - searches a specified file for a specified string
     - arguments
         - file path
-        - searcdh string
+        - search string
     - reads the file, finds lines in that file that contain the stirng argument and prints those lines
 - `stderr` - prints to the standard error console stream, instead of the standard output `stdout`
 
@@ -1333,3 +1333,29 @@ if let Some(max) = config_max {
         - needs to be annotated because Rust isn't able to infer the kind of collection
     - first avalue of `args` is the binary (like in C)
 - `fs::read_to_string` takes a file_path and returns a `std::io::Result<String>`
+
+### Refactoring to Improve Modularity and Error Handling
+
+- Separate functionality so each function is responsbile for a single task. Keeps the `main` function from being cluttered
+    - currently parses arguments and reads the file
+- Group configuration variables into one structure to make their purpose clear
+    - `query` and `file_path` are for configuraiton, but `contents` is business logic
+- `expect` will print an error when reading the file fails, but too generic
+    - could be missing file, could incorrect permissions, etc.
+- `expect` being used in multiple places can trigger an `index out of bounds` error if there are not enough arguments
+    - consolidating the error-handling code in one place helps future maintainers and ensures we're printing meaningful messages
+
+#### Separation of Concerns for Binary Projects
+
+- Split into _main.rs_ and _lib.rs_ and move the logic into _lib.rs_
+- if the command line parsing logic is small, it can remain in _main.rs_
+    - if it gets complicated, move it to _lib.rs_
+- Limit `main` function to
+    - calling the command line parsing logic with the argument values
+    - setting up any other configuration
+    - calling a `run` function in _lib.rs_
+    - handling the error if `run` returns an error
+- _main.rs_ handles running the program
+    - since `main` cannot be tested directly, should be small enough to verify correctness by reading it
+- _lib.rs_ handles the business logic
+
