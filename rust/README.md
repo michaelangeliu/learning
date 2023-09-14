@@ -1371,3 +1371,12 @@ if let Some(max) = config_max {
 
 - `parse_config` creates a new `Config`, so it makes sense to make it a `new` function instead
     - more idiomatic grouping the function with  the struct itself
+
+#### Fixing the Error Handling
+
+- Using `panic!` is helpful, but more appropriate for a programming problem than a usage problem
+- Returning `Result` may be more appropriate
+    - return `Err` when there's an issue
+        - `'static` lifetime is ok for the error values since it will exist for the lifetime of the program
+    - return `Ok` when successful
+- `unwrap_or_else` will return the inner `Ok` value, but if there is an `Err`, it will pass the error message into the anonymous function
