@@ -1393,3 +1393,9 @@ if let Some(max) = config_max {
     - return the `()` unit type
         - `Ok(())` is the idiomatic way to indicate we only want the side effects, no return value necessary
 - `if let` rather than `unwrap_or_else` to check whether `run` returns an `Err` value. `run` doesn't return a value that we want to `unwrap`.
+
+#### Splitting Code into a Library Crate
+
+- Move the `use` statements out of _main.rs_
+- Using `pub` to make the `Config` struct, its properties, and `build` function accessible
+- Use `minigrep` to use it
