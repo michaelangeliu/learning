@@ -1359,3 +1359,10 @@ if let Some(max) = config_max {
     - since `main` cannot be tested directly, should be small enough to verify correctness by reading it
 - _lib.rs_ handles the business logic
 
+#### Grouping Configuration Values
+
+- Using a struct can give a properties a meaningful name instead of a generic tuple that is immediately broken apart again
+- `Config` owns the `String` values
+    - using `clone` makes a full copy of the data for the `Config` instance to own.
+        - more time and memory than storing a reference
+        - more staightforward because we don't have to manage the lifetimes of the references
