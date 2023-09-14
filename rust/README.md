@@ -1366,3 +1366,8 @@ if let Some(max) = config_max {
     - using `clone` makes a full copy of the data for the `Config` instance to own.
         - more time and memory than storing a reference
         - more staightforward because we don't have to manage the lifetimes of the references
+
+#### Creating a COnstructor for Config
+
+- `parse_config` creates a new `Config`, so it makes sense to make it a `new` function instead
+    - more idiomatic grouping the function with  the struct itself
