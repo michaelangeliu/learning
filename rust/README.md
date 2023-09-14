@@ -1312,3 +1312,24 @@ if let Some(max) = config_max {
 - binary crates with only a _src/main.rs_ file do not expose functions that other crates can use
     - best practice to keep the _src/main.rs_ simple and import the _src/lib.rs_ modules as needed.
         - the _src/lib.rs_ modules can be integration tested
+
+## I/O Project: Building a Command Line Program
+
+- `grep` = Global search a Regular Expression and Print
+    - searches a specified file for a specified string
+    - arguments
+        - file path
+        - searcdh string
+    - reads the file, finds lines in that file that contain the stirng argument and prints those lines
+- `stderr` - prints to the standard error console stream, instead of the standard output `stdout`
+
+### Accepting Command Line Arguments
+
+- `--` double hyphens indicate the following arguments are for our program rather than for `cargo` when we run `cargo run`.
+- Can bring in external modules at any level, but `use std::env` so that we can use other functions and it's less ambiguous when calling `env::args`
+    - `std::env::args` Only takes valid unicode
+        - can use `args_os`, which produces `OsString`, which differs depending on the operating system
+    - `collect` = turns the iterator into a vector containing all the values produced by the iterator.
+        - needs to be annotated because Rust isn't able to infer the kind of collection
+    - first avalue of `args` is the binary (like in C)
+- `fs::read_to_string` takes a file_path and returns a `std::io::Result<String>`
