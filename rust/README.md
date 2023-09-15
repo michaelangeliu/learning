@@ -1413,3 +1413,12 @@ if let Some(max) = config_max {
 - backslash after the opening double quote tells Rust not to put a newline character at the beginning of the contents of this string literal
 - `'a` explicit lifetime ties the lifetime of the return value to the lifetime of the argument. i.e. the returned vector should contain string slices that reference the slices of the argument `contents`.
     - data returned by the `search` functionw ill live as long as the data passed into the `search` function in the `contents` argument.
+
+#### Writing Code to Pass the Test
+
+- For the test to pass,
+    - Iterate through each line of the contents
+    - Check whether the line contains our query string.
+    - If it does, add it to the list of values we're returning.
+    - If it doesn't, do nothing.
+    - Return the list of results that match
