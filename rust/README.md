@@ -1399,3 +1399,17 @@ if let Some(max) = config_max {
 - Move the `use` statements out of _main.rs_
 - Using `pub` to make the `Config` struct, its properties, and `build` function accessible
 - Use `minigrep` to use it
+
+### Developing the Library's Functionality with Test-Driven Development
+
+- TDD
+    1. Write a test that fails and run it to make sure it fails for the reason you expect.
+    2. Write or modify just enough code to make the new test pass.
+    3. Refactor the code you just added or changed and make sure the tests continue to pass.
+    4. Repeat from step 1.
+
+#### Writing a Failing Test
+
+- backslash after the opening double quote tells Rust not to put a newline character at the beginning of the contents of this string literal
+- `'a` explicit lifetime ties the lifetime of the return value to the lifetime of the argument. i.e. the returned vector should contain string slices that reference the slices of the argument `contents`.
+    - data returned by the `search` functionw ill live as long as the data passed into the `search` function in the `contents` argument.
