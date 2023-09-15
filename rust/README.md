@@ -1431,3 +1431,15 @@ if let Some(max) = config_max {
 - `is_ok` verifies the env variable is set otherwise it returns false
     - no need to unwrap or expect since we only care whether it is set or unset
 - `IGNORE_CASE=1 cargo run -- to poem.txt` passes the IGNORE_CASE env variable
+
+### Writing Error Messages to Standard Error Instead  of Standard Output
+
+- most terminals have two kinds of output:
+    - _standard output_ (`stdout`)
+    - _standard error_ (`stderr`)
+    - allows users to choose to direc thte successful output of a program to a file, but still print error messages to the screen.
+    - `println!` macro only can print to std out.
+- Command line programs are expected to send error messages to the standard error stream so we can still see error messages on screen even if we redirect the standard output stream to a file.
+- `>` directs standard output where to write the standard output instead of the screen
+- Earlier refactoring keeps all the code that prints error messages in the `main` function
+    - `eprintln!` macro prints to `stderr`
