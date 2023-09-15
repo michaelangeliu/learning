@@ -1422,3 +1422,12 @@ if let Some(max) = config_max {
     - If it does, add it to the list of values we're returning.
     - If it doesn't, do nothing.
     - Return the list of results that match
+
+### Working with Environment Variables
+
+- `env::var` from the `std` library returns a `Result`
+    - `Ok` if the env variable is set
+    - `Err` if the env variable is not set
+- `is_ok` verifies the env variable is set otherwise it returns false
+    - no need to unwrap or expect since we only care whether it is set or unset
+- `IGNORE_CASE=1 cargo run -- to poem.txt` passes the IGNORE_CASE env variable
