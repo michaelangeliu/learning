@@ -1443,3 +1443,80 @@ if let Some(max) = config_max {
 - `>` directs standard output where to write the standard output instead of the screen
 - Earlier refactoring keeps all the code that prints error messages in the `main` function
     - `eprintln!` macro prints to `stderr`
+
+## Functional Language Features: Iterators and Closures
+
+- Rust's design is significantly influenced by _functional programming_
+    - uses functions as values by passing them in arguments, returning them from other functions, assigning them to variables for later execution, and so forth.
+- _Closures_ = a function-like construct you can store in a variable
+- _Iterators_ = a way of processing a series of elements
+
+### Closures: Anonymous Functions that Capture Their Environment
+
+- Rust's closures are anonymous functions that can be saved in a variable or passed as arguments to other functions.
+- Closures can be created in one place then called elsewhere to be evaluated in a different context
+- Unlike functions, they can capture vvalues from the scope in which they're defined
+
+#### Capturing the Environment with Closures
+
+- Implementation of `unwrap_or_else` will evaluate the closure later if the result is needed
+- Closure captures an immutable reference to `self` isntance and passes it with the code specified to the `unwrap_or_else` method
+     - Functions are not able to capture their environemnt in this way.
+
+#### Closure Type Inference and Annotation
+
+- Closures don't usually require you to annotate the types of the parameters or the return values
+    - Type annotations are required on functions because the types are part of an explicit interface exposed to users
+    - Closures aren't used in an exposed interface
+        - stored in variables and used without naming them and exposing them to users of our library
+    - can be added to increase explicitness and clarity at the cost of being more verbose.
+    - types can usually be inferred
+        - calling the same closure with different types will result in an error since the types are inferred from their usage and will need to be evaluated to be able to be compiled
+
+#### Capturing References or Moving Ownership
+
+- Three ways to capture values from their environment (maps to the three ways a function can take a parameter)
+    1. borriwing immutably
+    2. borrowing mutably
+    3. taking ownership
+- Closure decides which to use based on what the body of the function does with the captured values
+- immutable variables can have multiple references from closures
+    - variable is accessible:
+        - before the closure definition 
+        - after the closure definition 
+        - after the closure definition, but before the closure is called
+        - after the closure is called
+- mutable variables restrict immutable borrows
+    - variable is accessible: 
+        - before the closure definition 
+        - after the closure definition 
+        - after the closure is called
+    - no longer accessible between the closure definition adn the closure call because when the closure is defined, it captures a mutable reference to the variable
+        - no other borrows are allowed when there's a mutable borrow
+- `move` can force a closure to take ownership of values even if the body of the closure doesn't strictly need ownership
+    - `move` is put prepended before the parameter list
+    - mostly useful when passing a closure to a new thread to move the data so that it's owned by the new thread 
+        - new thread might finish before the rest of the main thread or the main thread might finish first and try to drop the variable 
+
+#### Moving Captured Values Out of Closures and the `Fn` Traits
+
+- Clsoure body can
+    - move a captured value out of the closure
+    - mutate the captured value
+    - neither move nor mutate the value
+    - capture nothing from the environment to begin with
+- affects which traits the closure implements
+    - automatically implement one, two, or all three of these `Fn` traits additively
+        1. `FnOnce` applies to closures that can be called once.
+            - all closures implement at least this trait because all closures can be called
+            - a closure that moves captured values out of its body will only implement this trait because it can only be called once
+        2. `FnMut` applies to closures that don't move captured values out of their body, but might mutate the captured values
+        3. `Fn` applies to closures that don't move captured values out of their body and don't mutate captured values or don't capture anything from their environment
+            - can be called multiple times without mutating their environment, which is important with things like concurrancy
+- `Option<T>::unwrap_or_else` implementation example
+    - `T` is the generic type for `Some`
+    - `F` is the generic type parameter for the closure
+        - `FnOnce` trait bound is specified because `F` must be able to be called at most once
+- `sort_by_key` implementation defined on slices
+    - uses `FnMut` because it calls the closure multiple times
+    - cannot capture, mutate, or move out anything from its environment
