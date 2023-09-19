@@ -1520,3 +1520,45 @@ if let Some(max) = config_max {
 - `sort_by_key` implementation defined on slices
     - uses `FnMut` because it calls the closure multiple times
     - cannot capture, mutate, or move out anything from its environment
+
+### Processing a Series of Items with Iterators
+
+- iterator patterna llows a task to performed on a sequence of items in turn
+- Rust iterators are _lazy_, so they hav eno effect until the method that consumes the iterator is called
+    - e.g. just calling `.iter()` won't do anything until it's used in a loop
+- iterators handle the logic of creating an index and incrementing the index through the number of items
+
+#### The `Iterator` Trait and the `next` method
+
+- iterators implement a trait named `Iterator`, which defines a `type Item` and a function for `next`
+    - `type Item` is an _associated type_
+    - implementing the `Iterator` trait requires that an `Item` type is also defined, this is used as the return type of the `next` method
+    - `next` returns one item of the iterator at a time, wrapped in `Some` and returns `None`, when there are no more items
+- iterator next method can be called directly.
+    - iterator must be mutable since calling `next` will change the internal state that is used to keep track of the sequence
+        - code _consumes_ the iterators
+        - `for` loop takes ownership of the iterator and makes it mutable behind the scenes
+- `iter_mut` allows iterating over mutable references
+
+#### Methods that Consume the Iterator
+
+- std library provides methods which will call the `next` method
+- _consuming adaptors_ = methods that call `next`
+    - e.g. `sum` takes ownership of the iterator and repeatedly adds each item to a running total
+        - iterator cannot be reused because `sum` takes ownership
+
+#### Methods that Produce Other Iterators
+
+- _Iterator adaptors_ = don't consume the iterator, but produce different iterators by changing some aspect of the original iterator
+    - e.g. `map` returns a new iterator that produces the modified items
+        - must call `collect` to consume the new iterator
+        - takes a closure to customize the behavior
+    - iterator adaptors are lazy and do not consume the iterator, so they will do nothing unless they are called
+    - can chain multiple calls to iterator adaptors
+
+#### Using Closures that Capture Their Environment
+
+- e.g. `filter` gets an item from the iterator and returns a `bool`.
+    - uses a variable from the environment to match
+    - adapts the iterator into a new iterator that only contains elements for which the closure returns `true`
+    - takes ownership of the passed vector and the _needle_
